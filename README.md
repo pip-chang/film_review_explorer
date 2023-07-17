@@ -17,3 +17,19 @@ Topic Modeling & Visualization
     BERTopic
 
 
+
+# Name requiremnet for input data:
+
+{'permalink': 'NoneType, str',
+ 'rating': 'NoneType, str',
+ 'comments': 'NoneType, list',
+ 'date': 'Timestamp',
+ 'like_ratio': 'float',
+ 'review': 'str',
+ 'website': 'str',
+ 'rating_ratio': 'float',
+ 'upvotes': 'float',
+ 'location': 'NoneType, str',
+ 'total_votes': 'float'}
+
+

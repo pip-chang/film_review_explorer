@@ -42,18 +42,60 @@ def read_jsonl_to_dataframe(*paths: Union[Path, str]) -> pd.DataFrame:
     return full_df
 
 
-def clean_text(row: pd.Series) -> Optional[str]:
-    # clean chinese text: spaces, '\n'
-    # clean eng text: \n
+def get_column_types(df: pd.DataFrame) -> dict[str, str]:
+    column_types = {}
 
+    df_types = df.applymap(type)
+
+    for column in df.columns:
+        unique_types = df_types[column].unique()
+
+        unique_types = [t.__name__ for t in unique_types]
+
+        column_types[column] = ", ".join(set(unique_types))
+
+    return column_types
+
+
+def clean_cn_noise(text: str) -> str:
+    text = text.replace("\n", "")
+    text = re.sub(r"\s+", "", text)
+    text = re.sub(
+        r"([。，！？#＄¥％＆＊＋－／：；（）＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､、〃》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟–—‘’‛“”„‟…‧﹏.])\1+",
+        r"\1",
+        text,
+    )
+
+    return text
+
+
+def clean_en_noise(text: str) -> str:
+    text = text.replace("\n", " ")
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(
+        r"([!?#$%&'()*+,-./:;<=>@[\]^_`{|}~\'\"])\1+",
+        r"\1",
+        text,
+    )
+
+    return text
+
+
+def clean_text_basic(
+    row: pd.Series,
+    cn_websites: list[str],
+    clean_cn_noise=clean_cn_noise,
+    clean_en_noise=clean_en_noise,
+) -> str:
     review = row["review"]
-    pass
+    if row["website"] in cn_websites:
+        return clean_cn_noise(review)
+    else:
+        return clean_en_noise(review)
 
 
-def calculate_review_length(
-    row: pd.Series, chinese_websites: list[str]
-) -> Optional[int]:
-    if row["website"] in chinese_websites:
+def calculate_review_length(row: pd.Series, cn_websites: list[str]) -> int:
+    if row["website"] in cn_websites:
         return len(row["review"])
     else:
         return len(re.findall(r"\b\w+\b", row["review"]))
@@ -92,11 +134,9 @@ def update_column(
     return df
 
 
-def get_sub_dataframe(df: pd.DataFrame, condition: Callable) -> pd.DataFrame:
+def condition_filter(df: pd.DataFrame, condition: Callable) -> pd.DataFrame:
     """
     def condition(data):
         return (data['A'] > 2) & (data['B'] < 9) & (data['C'] == 'c')
     """
     return df.loc[condition]
-
-

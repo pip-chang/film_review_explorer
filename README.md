@@ -1,35 +1,35 @@
-# DH_L - Tools for data analysis:
+# Film Review Explorer
 
-Data input: jsonl files of scraped data
+The film_review_explorer is a Python library for analyzing film reviews scraped from various websites with [this](https://github.com/pip-chang/film_review_scraper) library.
 
-Data explorations with plots: 
-    min, max, mean of review length
-    top words
-    word cloud
-    n-grams
-    NER
-    frequency timeline?
-    frequency heatmap?
-    word in context examples
+## Installation
 
-Topic Modeling & Visualization
-    LDA
-    BERTopic
+Use the package manager [pip](https://pip.pypa.io/en/stable/) to install film_review_scraper.
 
+```bash
+pip install film_review_explorer
+```
 
+## Usage
 
-# Name requiremnet for input data:
+Please refer to the [demonstration](https://nbviewer.org/github/pip-chang/film_review_explorer/blob/main/demonstration.ipynb) for detailed usage.
 
-{'permalink': 'NoneType, str',
- 'rating': 'NoneType, str',
- 'comments': 'NoneType, list',
- 'date': 'Timestamp',
- 'like_ratio': 'float',
- 'review': 'str',
- 'website': 'str',
- 'rating_ratio': 'float',
- 'upvotes': 'float',
- 'location': 'NoneType, str',
- 'total_votes': 'float'}
+## Documentation
+
+ReadTheDocs: [film_review_explorer](https://film-review-explorer.readthedocs.io/en/latest/)
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first
+to discuss what you would like to change.
+
+Please make sure to update tests as appropriate.
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)
+
+## Upcoming Updates:
+Topic Modeling & Visualization with LDA and BERTopic
 
 

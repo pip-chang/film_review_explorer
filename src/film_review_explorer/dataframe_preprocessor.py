@@ -2,7 +2,6 @@ import logging
 import re
 import math
 import random
-from turtle import up, update
 
 import numpy as np
 import pandas as pd

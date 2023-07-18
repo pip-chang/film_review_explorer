@@ -7,7 +7,7 @@ Welcome to film_review_explorer's documentation!
 ================================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
    readme_link

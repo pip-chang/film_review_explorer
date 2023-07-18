@@ -1,9 +1,21 @@
 import logging
 import re
 import math
-from typing import Any, Callable, Optional, Union
+import random
+from turtle import up, update
+
+import numpy as np
 import pandas as pd
+from collections import Counter
+from typing import Callable, Optional, Union, Literal, List
 from pathlib import Path
+from wordcloud import WordCloud
+from matplotlib import pyplot as plt
+from textacy.extract.kwic import keyword_in_context
+
+from topic_modeler import TextProcessor
+
+ZH_WEBSITES = ["Douban"]
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -57,7 +69,7 @@ def get_column_types(df: pd.DataFrame) -> dict[str, str]:
     return column_types
 
 
-def clean_cn_noise(text: str) -> str:
+def clean_zh_noise(text: str) -> str:
     text = text.replace("\n", "")
     text = re.sub(r"\s+", "", text)
     text = re.sub(
@@ -83,22 +95,24 @@ def clean_en_noise(text: str) -> str:
 
 def clean_text_basic(
     row: pd.Series,
-    cn_websites: list[str],
-    clean_cn_noise=clean_cn_noise,
+    zh_websites: list[str] = ZH_WEBSITES,
+    clean_zh_noise=clean_zh_noise,
     clean_en_noise=clean_en_noise,
 ) -> str:
     review = row["review"]
-    if row["website"] in cn_websites:
-        return clean_cn_noise(review)
+    if row["website"] in zh_websites:
+        return clean_zh_noise(review)
     else:
         return clean_en_noise(review)
 
 
-def calculate_review_length(row: pd.Series, cn_websites: list[str]) -> int:
-    if row["website"] in cn_websites:
+def calculate_review_length(
+    row: pd.Series, zh_websites: list[str] = ZH_WEBSITES
+) -> int:
+    if row["website"] in zh_websites:
         return len(row["review"])
     else:
-        return len(re.findall(r"\b\w+\b", row["review"]))
+        return len(re.findall(r"(?u)\b[\w-]+\b", row["review"]))
 
 
 def calculate_rating_level(row: pd.Series) -> Optional[str]:
@@ -129,14 +143,131 @@ def calculate_like_level(row: pd.Series) -> Optional[str]:
 
 def update_column(
     df: pd.DataFrame, apply_function: Callable, column_name: str, *args, **kwargs
-) -> pd.DataFrame:
+) -> None:
     df[column_name] = df.apply(lambda row: apply_function(row, *args, **kwargs), axis=1)
-    return df
 
 
-def condition_filter(df: pd.DataFrame, condition: Callable) -> pd.DataFrame:
-    """
-    def condition(data):
-        return (data['A'] > 2) & (data['B'] < 9) & (data['C'] == 'c')
-    """
-    return df.loc[condition]
+def auto_basic_process(df: pd.DataFrame) -> None:
+    update_column(df, clean_text_basic, column_name="review")
+    update_column(df, calculate_review_length, column_name="review_length")
+    update_column(df, calculate_rating_level, column_name="rating_level")
+    update_column(df, calculate_like_level, column_name="like_level")
+
+
+def auto_nlp_process(
+    df: pd.DataFrame, processor: TextProcessor, language: str = Literal["zh", "en"]
+) -> None:
+    if language == "zh":
+        (
+            df["tokens"],
+            df["entities"],
+            df["bigrams"],
+            df["trigrams"],
+            df["quadgrams"],
+        ) = zip(*list(processor.process_zh(df["review"])))
+    else:
+        (
+            df["tokens"],
+            df["entities"],
+            df["bigrams"],
+            df["trigrams"],
+            df["quadgrams"],
+        ) = zip(*list(processor.process_en(df["review"])))
+
+
+def create_tf_df(
+    df: pd.DataFrame, column: str = "tokens", min_tf: int = 2
+) -> pd.DataFrame:
+    counter = Counter()
+    df[column].map(counter.update)
+
+    tf_df = pd.DataFrame.from_dict(counter, orient="index", columns=["tf"])
+    tf_df = tf_df.query("tf >= @min_tf")
+    tf_df.index.name = "object"
+
+    return tf_df.sort_values("tf", ascending=False)
+
+
+def create_idf_df(
+    df: pd.DataFrame, column: str = "tokens", min_df: int = 2
+) -> pd.DataFrame:
+    def update(objects):
+        counter.update(set(objects))
+
+    counter = Counter()
+    df[column].map(update)
+
+    idf_df = pd.DataFrame.from_dict(counter, orient="index", columns=["df"])
+    idf_df = idf_df.query("df >= @min_df")
+    idf_df["idf"] = np.log(len(df) / idf_df["df"]) + 0.1
+    idf_df.index.name = "object"
+
+    return idf_df.sort_values("idf", ascending=False)
+
+
+def create_tfidf_df(tf_df: pd.DataFrame, idf_df: pd.DataFrame):
+    tfidf_df = tf_df.merge(idf_df, left_index=True)
+    tfidf_df["tfidf"] = tfidf_df["tf"] * tfidf_df["idf"]
+    return tfidf_df
+
+
+def wordcloud(freq: pd.Series, title: str = None, max_words: int = 100):
+    wc = WordCloud(
+        width=800,
+        height=400,
+        background_color="black",
+        colormap="Paired",
+        max_font_size=150,
+        max_words=max_words,
+    )
+
+    counter = Counter(freq.fillna(0).to_dict())
+
+    wc.generate_from_frequencies(counter)
+    plt.figure()
+    plt.title(title)
+    plt.imshow(wc, interpolation="bilinear")
+    plt.axis("off")
+
+
+def KWIC(*args, **kwargs):
+    return keyword_in_context(
+        *args, **{kw: arg for kw, arg in kwargs.items() if kw != "print_only"}
+    )
+
+
+def kwic(texts: pd.Series, keyword: str, window: int = 60, print_samples: int = 20):
+    def add_kwic(text):
+        kwic_list.extend(
+            KWIC(text, keyword, ignore_case=True, window_width=window, print_only=False)
+        )
+
+    kwic_list = []
+    texts.map(add_kwic)
+
+    n = min(print_samples, len(kwic_list))
+    print(f"{n} random samples out of {len(kwic_list)} " + f"contexts for '{keyword}':")
+
+    for sample in random.sample(list(kwic_list), n):
+        print(
+            re.sub(r"[\n\t]", " ", sample[0])
+            + " "
+            + sample[1]
+            + " "
+            + re.sub(r"[\n\t]", " ", sample[2])
+        )
+
+
+def count_keywords(objects, keywords: List[str]):
+    objects = [obj for obj in objects if obj in keywords]
+    counter = Counter(objects)
+    return [counter.get(k, 0) for k in keywords]
+
+
+def count_keywords_by(
+    df: pd.DataFrame, by: str, keywords: List[str], column: str = "tokens"
+):
+    freq_matrix = df[column].apply(count_keywords, keywords=keywords)
+    freq_df = pd.DataFrame.from_records(freq_matrix, columns=keywords)
+    freq_df[by] = df[by]
+    return freq_df.groupby(by=by).sum().sort_values(by)

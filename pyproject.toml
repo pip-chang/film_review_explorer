@@ -5,17 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "film_review_explorer"
 version = "0.0.1"
-authors = [
-  { name="Chang Jianghan", email="jianghanchang@hotmail.com" },
-]
 description = "A python package for exploring film reviews."
 readme = "README.md"
 requires-python = ">=3.7"
+license = {file = "LICENSE"}
+keywords = ["film"]
+authors = [
+  {name="Chang Jianghan", email="jianghanchang@hotmail.com"},
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+  "pandas",
+  "seaborn",
+]
 
 [project.urls]
-"Homepage" = "https://github.com/pip-chang/film_review_explorer"
+Repository = "https://github.com/pip-chang/film_review_explorer"

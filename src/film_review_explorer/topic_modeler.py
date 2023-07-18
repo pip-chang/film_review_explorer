@@ -3,9 +3,6 @@ import pandas as pd
 from typing import Iterable, Generator, List
 from spacy.tokens import Doc, Token
 
-df = pd.read_json("data.json")
-
-
 # load processed dataframes in and prepare for topic modeling
 
 # functions for every step of BERTopic
@@ -51,7 +48,7 @@ class TextProcessor:
             ]
         else:
             return [
-                token
+                token.text
                 for token in doc
                 if self.check_token(token, punct=punct, num=num, stopword=stopword)
             ]

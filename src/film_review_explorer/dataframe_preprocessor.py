@@ -13,7 +13,7 @@ from wordcloud import WordCloud
 from matplotlib import pyplot as plt
 from textacy.extract.kwic import keyword_in_context
 
-from topic_modeler import TextProcessor
+from .topic_modeler import TextProcessor
 
 ZH_WEBSITES = ["Douban"]
 
@@ -95,7 +95,7 @@ def clean_en_noise(text: str) -> str:
 
 def clean_text_basic(
     row: pd.Series,
-    zh_websites: list[str] = ZH_WEBSITES,
+    zh_websites: List[str] = ZH_WEBSITES,
     clean_zh_noise=clean_zh_noise,
     clean_en_noise=clean_en_noise,
 ) -> str:
@@ -107,7 +107,7 @@ def clean_text_basic(
 
 
 def calculate_review_length(
-    row: pd.Series, zh_websites: list[str] = ZH_WEBSITES
+    row: pd.Series, zh_websites: List[str] = ZH_WEBSITES
 ) -> int:
     if row["website"] in zh_websites:
         return len(row["review"])
@@ -205,21 +205,37 @@ def create_idf_df(
     return idf_df.sort_values("idf", ascending=False)
 
 
-def create_tfidf_df(tf_df: pd.DataFrame, idf_df: pd.DataFrame):
-    tfidf_df = tf_df.merge(idf_df, left_index=True)
+def create_tfidf_df(df: pd.DataFrame, column: str = "tokens", min_tf: int = 2, min_df: int = 2):
+    tf_df = create_tf_df(df=df, column=column, min_tf=min_tf)
+    idf_df = create_idf_df(df=df, column=column, min_df=min_df)
+    tfidf_df = pd.merge(tf_df, idf_df, on="object")
     tfidf_df["tfidf"] = tfidf_df["tf"] * tfidf_df["idf"]
     return tfidf_df
 
 
-def wordcloud(freq: pd.Series, title: str = None, max_words: int = 100):
-    wc = WordCloud(
-        width=800,
-        height=400,
-        background_color="black",
-        colormap="Paired",
-        max_font_size=150,
-        max_words=max_words,
-    )
+def wordcloud(
+    freq: pd.Series, title: str = None, max_words: int = 100, language: str = "en"
+):
+    if language == "zh":
+        font_path = "fonts/SourceHanSerifK-Light.otf"
+        wc = WordCloud(
+            font_path=font_path,
+            width=800,
+            height=400,
+            background_color="black",
+            colormap="Paired",
+            max_font_size=150,
+            max_words=max_words,
+        )
+    else:
+        wc = WordCloud(
+            width=800,
+            height=400,
+            background_color="black",
+            colormap="Paired",
+            max_font_size=150,
+            max_words=max_words,
+        )
 
     counter = Counter(freq.fillna(0).to_dict())
 
@@ -258,7 +274,7 @@ def kwic(texts: pd.Series, keyword: str, window: int = 60, print_samples: int = 
         )
 
 
-def count_keywords(objects, keywords: List[str]):
+def count_keywords(objects, keywords):
     objects = [obj for obj in objects if obj in keywords]
     counter = Counter(objects)
     return [counter.get(k, 0) for k in keywords]
@@ -266,7 +282,8 @@ def count_keywords(objects, keywords: List[str]):
 
 def count_keywords_by(
     df: pd.DataFrame, by: str, keywords: List[str], column: str = "tokens"
-):
+) -> pd.DataFrame:
+    df = df.reset_index()
     freq_matrix = df[column].apply(count_keywords, keywords=keywords)
     freq_df = pd.DataFrame.from_records(freq_matrix, columns=keywords)
     freq_df[by] = df[by]

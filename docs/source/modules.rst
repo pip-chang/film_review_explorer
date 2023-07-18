@@ -1,5 +1,8 @@
-film_review_explorer
-====================
+film\_review\_explorer modules
+==============================
+
+Submodules
+----------
 
 .. toctree::
    :maxdepth: 4

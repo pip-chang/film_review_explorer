@@ -1,6 +1,7 @@
-# Film Review Explorer
+# Film Review Explorer - Textual Analysis of Chinese and English Film Reviews
 
 The film_review_explorer is a Python library for analyzing film reviews scraped from various websites with [this](https://github.com/pip-chang/film_review_scraper) library.
+
 
 ## Installation
 
